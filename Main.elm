@@ -22,7 +22,7 @@ view: Model -> Html Msg
 view model = div [ style [
   "-moz-user-select" => "none",
   "user-select" => "none"
- ] ] (List.map View.line model.list)
+ ] ] (List.map View.line model.board)
 
 none: Model -> (Model, Cmd Msg)
 none model = (model, Cmd.none)
@@ -30,7 +30,7 @@ none model = (model, Cmd.none)
 update: Msg -> Model -> (Model, Cmd Msg)
 update msg model = case msg of
   Roll -> (model, RandomBoard.generate model)
-  NewList list -> none (Model list)
+  NewBoard board -> ((Model board), Cmd.none)
 
 subscriptions: Model -> Sub Msg
 subscriptions model = Sub.none

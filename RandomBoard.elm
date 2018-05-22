@@ -10,8 +10,7 @@ import Shared exposing (Model, Board, Line, Msg(..))
 type alias Palette = List String
 type alias Matched = List String
 type alias PairMaybe = (Maybe String, Maybe String)
-type alias ListMaybe = List (Maybe String)
-type alias PairListMaybe = (ListMaybe, ListMaybe)
+type alias PairLine = (Line, Line)
 
 empty: Maybe a
 empty = Nothing
@@ -33,15 +32,12 @@ getPalette palette matched =
 push: List a -> a -> List a
 push list x = append list [x]
 
-extractSourceItem: Palette -> Int -> String
+extractSourceItem: Palette -> Int -> Maybe String
 extractSourceItem source i =
  let a = Array.fromList source
-     s = Array.get i a
- in case s of
- Just value -> value
- Nothing -> "a" -- terrible hack to not pass monad everywhere
+ in Array.get i a
 
-generateFromSource: Palette -> Generator String
+generateFromSource: Palette -> Generator (Maybe String)
 generateFromSource source =
  Random.map (\i -> extractSourceItem source i)
   <| Random.int 0
@@ -62,7 +58,7 @@ gg: PairMaybe -> (PairMaybe, Line) -> Generator (PairMaybe, Line)
 gg pair ((f, s), list) =
  let source = getPalette defaultPalette (getMatched pair (f, s))
  in
-  Random.map (\x -> ((s, Just x), push list x))
+  Random.map (\x -> ((s, x), push list x))
    <| generateFromSource source
 
 processItem: PairMaybe -> Generator (PairMaybe, Line)
@@ -70,27 +66,24 @@ processItem: PairMaybe -> Generator (PairMaybe, Line)
 processItem pair gen =
  andThen (gg pair) gen
 
-getEmptyLines: PairListMaybe
+getEmptyLines: PairLine
 getEmptyLines = (List.repeat 10 empty, List.repeat 10 empty)
 
-toMonadList: Line -> ListMaybe
-toMonadList list = List.map (\a -> Just a) list
-
-generateLine: PairListMaybe -> Generator Line
+generateLine: PairLine -> Generator Line
 generateLine (line1, line2) =
   Random.map (\(prev, line) -> line)
   <| List.foldl processItem
   (Random.map (\x -> (emptyPair, [])) Random.bool)
   <| List.map2 (,) line1 line2
 
-generateBoard: Int -> PairListMaybe -> Board -> Generator Board
+generateBoard: Int -> PairLine -> Board -> Generator Board
 generateBoard length (first, second) board = case length of
  10 -> Random.map (\x -> board) Random.bool
  _  -> andThen (\x -> x)
   <| Random.map (\line -> generateBoard (length + 1)
-  (second, toMonadList line) (push board line))
+  (second, line) (push board line))
   <| generateLine (first, second)
 
 generate: Model -> Cmd Msg
 generate model =
- Random.generate NewList (generateBoard 0 getEmptyLines [])
+ Random.generate NewBoard (generateBoard 0 getEmptyLines [])

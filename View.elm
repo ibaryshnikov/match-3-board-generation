@@ -6,26 +6,44 @@ import Html.Events exposing (onClick)
 import List
 
 import Helpers exposing ((=>), px)
-import Shared exposing (Msg(..))
+import Shared exposing (Line, Msg(..))
 
-item: String -> Html Msg
+type StyleType = Red | Pink | Blue | Green
+
+extractStyle: String -> Html.Attribute msg
+extractStyle color =
+ style [
+    "display" => "inline-block",
+    "border" => "1px solid black",
+    "width" => px 30,
+    "height" => px 30,
+    "line-height" => px 30,
+    "text-align" => "center",
+    "cursor" => "pointer",
+    "margin" => px 1,
+    "background" => "yellow",
+    "color" => color
+ ]
+
+getStyle: StyleType -> Html.Attribute msg
+getStyle styleType = extractStyle (case styleType of
+ Red   -> "red"
+ Pink  -> "pink"
+ Blue  -> "blue"
+ Green -> "green")
+
+extractValue: Maybe String -> String
+extractValue s = case s of
+    Just a -> a
+    Nothing -> "0"
+
+item: Maybe String -> Html Msg
 item value = div [
-    style [
-        "display" => "inline-block",
-        "border" => "1px solid black",
-        "width" => px 30,
-        "height" => px 30,
-        "line-height" => px 30,
-        "text-align" => "center",
-        "cursor" => "pointer",
-        "margin" => px 1,
-        "background" => "yellow",
-        "color" => "green"
-    ],
+    getStyle Green,
     onClick Roll
- ] [ text value ]
+ ] [ text (extractValue value) ]
 
-line: List String -> Html Msg
+line: Line -> Html Msg
 line list = div [ style [
     "margin" => "0 auto",
     "width" => px ((List.length list) * 34)
