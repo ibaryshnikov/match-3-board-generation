@@ -1,8 +1,9 @@
-module Shared exposing (Model, Board, Line, Msg(..))
+module Shared exposing (Model, Board, Line, Cell, Msg(..))
 
-type alias Line = List (Maybe String)
+type alias Cell = Maybe String
+type alias Line = List Cell
 type alias Board = List Line
-type alias Model = { board: Board }
+type alias Model = { board: Board, width: Int, height: Int }
 
 type Msg =
  Roll |

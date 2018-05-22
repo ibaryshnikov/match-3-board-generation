@@ -5,18 +5,17 @@ import List exposing (append)
 import Array exposing (Array)
 import Random exposing (Generator, andThen)
 
-import Shared exposing (Model, Board, Line, Msg(..))
+import Shared exposing (Model, Board, Line, Cell, Msg(..))
 
 type alias Palette = List String
 type alias Matched = List String
-type alias PairMaybe = (Maybe String, Maybe String)
-type alias PairLine = (Line, Line)
+type alias Pair a = (a, a)
 
 empty: Maybe a
 empty = Nothing
 
-emptyPair: (Maybe a, Maybe a)
-emptyPair = (Nothing, Nothing)
+pair: a -> Pair a
+pair a = (a, a)
 
 checkAgainstMatched: String -> Matched -> Bool
 checkAgainstMatched i matched =
@@ -43,40 +42,40 @@ generateFromSource source =
   <| Random.int 0
   <| (List.length source) - 1
 
-unwrapPair: PairMaybe -> List String
+unwrapPair: Pair Cell -> List String
 unwrapPair prev = case prev of
  (Just i1, Just i2) -> if i1 == i2 then [i1] else []
  _ -> []
 
-getMatched: PairMaybe -> PairMaybe -> Matched
+getMatched: Pair Cell -> Pair Cell -> Matched
 getMatched top left =
   let l1 = unwrapPair top
       l2 = unwrapPair left
   in List.append l1 l2
 
-gg: PairMaybe -> (PairMaybe, Line) -> Generator (PairMaybe, Line)
+gg: Pair Cell -> (Pair Cell, Line) -> Generator (Pair Cell, Line)
 gg pair ((f, s), list) =
  let source = getPalette defaultPalette (getMatched pair (f, s))
  in
   Random.map (\x -> ((s, x), push list x))
    <| generateFromSource source
 
-processItem: PairMaybe -> Generator (PairMaybe, Line)
- -> Generator (PairMaybe, Line)
+processItem: Pair Cell -> Generator (Pair Cell, Line)
+ -> Generator (Pair Cell, Line)
 processItem pair gen =
  andThen (gg pair) gen
 
-getEmptyLines: PairLine
-getEmptyLines = (List.repeat 10 empty, List.repeat 10 empty)
+emptyLine: Int -> Line
+emptyLine length = List.repeat length empty
 
-generateLine: PairLine -> Generator Line
+generateLine: Pair Line -> Generator Line
 generateLine (line1, line2) =
   Random.map (\(prev, line) -> line)
   <| List.foldl processItem
-  (Random.map (\x -> (emptyPair, [])) Random.bool)
+  (Random.map (\x -> (pair empty, [])) Random.bool)
   <| List.map2 (,) line1 line2
 
-generateBoard: Int -> PairLine -> Board -> Generator Board
+generateBoard: Int -> Pair Line -> Board -> Generator Board
 generateBoard length (first, second) board = case length of
  10 -> Random.map (\x -> board) Random.bool
  _  -> andThen (\x -> x)
@@ -86,4 +85,7 @@ generateBoard length (first, second) board = case length of
 
 generate: Model -> Cmd Msg
 generate model =
- Random.generate NewBoard (generateBoard 0 getEmptyLines [])
+ Random.generate NewBoard
+  <| generateBoard 0
+   (pair <| emptyLine model.width)
+   []

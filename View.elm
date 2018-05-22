@@ -6,7 +6,7 @@ import Html.Events exposing (onClick)
 import List
 
 import Helpers exposing ((=>), px)
-import Shared exposing (Line, Msg(..))
+import Shared exposing (Line, Cell, Msg(..))
 
 type StyleType = Red | Pink | Blue | Green
 
@@ -32,12 +32,12 @@ getStyle styleType = extractStyle (case styleType of
  Blue  -> "blue"
  Green -> "green")
 
-extractValue: Maybe String -> String
+extractValue: Cell -> String
 extractValue s = case s of
     Just a -> a
     Nothing -> "0"
 
-item: Maybe String -> Html Msg
+item: Cell -> Html Msg
 item value = div [
     getStyle Green,
     onClick Roll
