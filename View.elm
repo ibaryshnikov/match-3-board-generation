@@ -1,17 +1,16 @@
-module View exposing (line)
+module View exposing (render)
 
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (style)
 import Html.Events exposing (onClick)
-import List
 
-import Helpers exposing ((=>), px)
-import Shared exposing (Line, Cell, Msg(..))
+import Dict
 
-type StyleType = Red | Pink | Blue | Green
+import Helpers exposing ((=>), px, exclusiveRange)
+import Shared exposing (Model, Board, Msg(..))
 
-extractStyle: String -> Html.Attribute msg
-extractStyle color =
+cellStyle: Html.Attribute Msg
+cellStyle =
  style [
     "display" => "inline-block",
     "border" => "1px solid black",
@@ -22,29 +21,41 @@ extractStyle color =
     "cursor" => "pointer",
     "margin" => px 1,
     "background" => "yellow",
-    "color" => color
+    "color" => "green"
  ]
 
-getStyle: StyleType -> Html.Attribute msg
-getStyle styleType = extractStyle (case styleType of
- Red   -> "red"
- Pink  -> "pink"
- Blue  -> "blue"
- Green -> "green")
+extractCell: Int -> Int -> Board -> String
+extractCell i j board =
+ case Dict.get (i, j) board of
+ Just s  -> s
+ Nothing -> ""
 
-extractValue: Cell -> String
-extractValue s = case s of
-    Just a -> a
-    Nothing -> "0"
-
-item: Cell -> Html Msg
-item value = div [
-    getStyle Green,
+renderItem: Int -> Int -> Board -> Html Msg
+renderItem i j board =
+ let s = extractCell i j board
+ in div [
+    cellStyle,
     onClick Roll
- ] [ text (extractValue value) ]
+ ] [ text s ]
 
-line: Line -> Html Msg
-line list = div [ style [
+renderLine: Int -> Int -> Board -> Html Msg
+renderLine i width board =
+ let list     = exclusiveRange 0 width
+     elements = List.map (\j -> renderItem i j board) list
+ in div [ style [
     "margin" => "0 auto",
-    "width" => px ((List.length list) * 34)
- ] ] <| List.map item list
+    "width" => px (width * 34)
+ ] ] elements
+
+renderBoard: Model -> List (Html Msg)
+renderBoard { width, height, board } =
+ let list = exclusiveRange 0 height
+ in List.map (\i -> renderLine i width board) list
+
+render: Model -> Html Msg
+render model =
+  let elements = renderBoard model
+  in div [ style [
+    "-moz-user-select" => "none",
+    "user-select"      => "none"
+  ] ] elements

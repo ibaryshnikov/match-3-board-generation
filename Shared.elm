@@ -1,8 +1,9 @@
-module Shared exposing (Model, Board, Line, Cell, Msg(..))
+module Shared exposing (Position, Board, Model, Msg(..))
 
-type alias Cell = Maybe String
-type alias Line = List Cell
-type alias Board = List Line
+import Dict exposing (Dict)
+
+type alias Position = (Int, Int)
+type alias Board = Dict Position String
 type alias Model = { board: Board, width: Int, height: Int }
 
 type Msg =

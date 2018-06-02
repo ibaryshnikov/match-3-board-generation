@@ -1,9 +1,7 @@
-import Html exposing (Html, text, div)
-import Html.Attributes exposing (style)
-import List
+import Html exposing (Html)
 import Task
+import Dict
 
-import Helpers exposing ((=>))
 import RandomBoard
 import Shared exposing (Model, Msg(..))
 import View
@@ -22,16 +20,10 @@ send msg =
   |> Task.perform identity
 
 init: (Model, Cmd Msg)
-init = (Model [] 10 10, send Roll)
+init = (Model Dict.empty 10 10, send Roll)
 
 view: Model -> Html Msg
-view model = div [ style [
-  "-moz-user-select" => "none",
-  "user-select" => "none"
- ] ] (List.map View.line model.board)
-
-none: Model -> (Model, Cmd Msg)
-none model = (model, Cmd.none)
+view model = View.render model
 
 update: Msg -> Model -> (Model, Cmd Msg)
 update msg model = case msg of

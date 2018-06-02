@@ -1,91 +1,67 @@
 module RandomBoard exposing (generate)
 
-import Maybe
-import List exposing (append)
 import Array exposing (Array)
-import Random exposing (Generator, andThen)
+import Dict
+import Random exposing (Generator)
 
-import Shared exposing (Model, Board, Line, Cell, Msg(..))
+import Helpers exposing (exclusiveRange)
+import Shared exposing (Position, Board, Model, Msg(..))
 
-type alias Palette = List String
-type alias Matched = List String
-type alias Pair a = (a, a)
+type alias Gems = List String
 
-empty: Maybe a
-empty = Nothing
-
-pair: a -> Pair a
-pair a = (a, a)
-
-checkAgainstMatched: String -> Matched -> Bool
-checkAgainstMatched i matched =
- List.all (\m -> i /= m) matched
-
-defaultPalette: Palette
+defaultPalette: Gems
 defaultPalette = ["a", "b", "c", "d", "e"]
 
-getPalette: Palette -> Matched -> Palette
+getPalette: Gems -> Gems -> Gems
 getPalette palette matched =
-  List.filter (\i -> checkAgainstMatched i matched) palette 
+  List.filter (\i -> not <| List.member i matched) palette 
 
-push: List a -> a -> List a
-push list x = append list [x]
+insertValue: Gems -> Int -> Position -> Board -> Board
+insertValue source index position board =
+ let array = Array.fromList source
+ in case Array.get index array of
+  Just value -> Dict.insert position value board
+  Nothing    -> board
 
-extractSourceItem: Palette -> Int -> Maybe String
-extractSourceItem source i =
- let a = Array.fromList source
- in Array.get i a
-
-generateFromSource: Palette -> Generator (Maybe String)
-generateFromSource source =
- Random.map (\i -> extractSourceItem source i)
-  <| Random.int 0
-  <| (List.length source) - 1
-
-unwrapPair: Pair Cell -> List String
-unwrapPair prev = case prev of
- (Just i1, Just i2) -> if i1 == i2 then [i1] else []
+getMatched: Board -> Position -> Position -> Gems
+getMatched board p1 p2 =
+ let first  = Dict.get p1 board
+     second = Dict.get p2 board
+ in case (first, second) of
+ (Just v1, Just v2) -> if v1 == v2 then [v1] else []
  _ -> []
 
-getMatched: Pair Cell -> Pair Cell -> Matched
-getMatched top left =
-  let l1 = unwrapPair top
-      l2 = unwrapPair left
-  in List.append l1 l2
+getSource: Position -> Board -> Gems
+getSource (i, j) board =
+ let partial = getMatched board
+     m1      = partial (i, j - 1) (i, j - 2)
+     m2      = partial (i - 1, j) (i - 2, j)
+     matched = List.append m1 m2
+ in getPalette defaultPalette matched
 
-gg: Pair Cell -> (Pair Cell, Line) -> Generator (Pair Cell, Line)
-gg pair ((f, s), list) =
- let source = getPalette defaultPalette (getMatched pair (f, s))
- in
-  Random.map (\x -> ((s, x), push list x))
-   <| generateFromSource source
+generateItem: Position -> Board -> Generator Board
+generateItem position board =
+  let source = getSource position board
+      max    = List.length source - 1
+      gen    = Random.int 0 max
+  in Random.map (\i -> insertValue source i position board) gen
 
-processItem: Pair Cell -> Generator (Pair Cell, Line)
- -> Generator (Pair Cell, Line)
-processItem pair gen =
- andThen (gg pair) gen
+genItem: Position -> Generator Board -> Generator Board
+genItem position gen =
+ let next board = generateItem position board
+ in Random.andThen next gen
 
-emptyLine: Int -> Line
-emptyLine length = List.repeat length empty
+generateLine: Int -> Int -> Generator Board -> Generator Board
+generateLine i width chained =
+  let list = exclusiveRange 0 width
+  in List.foldl (\j -> genItem (i, j)) chained list
 
-generateLine: Pair Line -> Generator Line
-generateLine (line1, line2) =
-  Random.map (\(prev, line) -> line)
-  <| List.foldl processItem
-  (Random.map (\x -> (pair empty, [])) Random.bool)
-  <| List.map2 (,) line1 line2
-
-generateBoard: Int -> Pair Line -> Board -> Generator Board
-generateBoard length (first, second) board = case length of
- 10 -> Random.map (\x -> board) Random.bool
- _  -> andThen (\x -> x)
-  <| Random.map (\line -> generateBoard (length + 1)
-  (second, line) (push board line))
-  <| generateLine (first, second)
+generateBoard: Int -> Int -> Generator Board
+generateBoard width height =
+ let list    = exclusiveRange 0 height
+     initial = Random.map(\x -> Dict.empty) Random.bool
+ in List.foldl (\i -> generateLine i width) initial list
 
 generate: Model -> Cmd Msg
-generate model =
- Random.generate NewBoard
-  <| generateBoard 0
-   (pair <| emptyLine model.width)
-   []
+generate { width, height } =
+ Random.generate NewBoard <| generateBoard width height
