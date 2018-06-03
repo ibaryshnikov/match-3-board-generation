@@ -7,10 +7,10 @@ import Html.Events exposing (onClick)
 import Dict
 
 import Helpers exposing ((=>), px, exclusiveRange)
-import Shared exposing (Model, Board, Msg(..))
+import Shared exposing (Position, Board, Model, Msg(..))
 
-cellStyle: Html.Attribute Msg
-cellStyle =
+itemStyle: Html.Attribute Msg
+itemStyle =
  style [
     "display" => "inline-block",
     "border" => "1px solid black",
@@ -24,38 +24,37 @@ cellStyle =
     "color" => "green"
  ]
 
-extractCell: Int -> Int -> Board -> String
-extractCell i j board =
- case Dict.get (i, j) board of
+extractValue: Position -> Board -> String
+extractValue position board =
+ case Dict.get position board of
  Just s  -> s
  Nothing -> ""
 
-renderItem: Int -> Int -> Board -> Html Msg
-renderItem i j board =
- let s = extractCell i j board
+renderItem: Position -> Board -> Html Msg
+renderItem position board =
+ let gem = extractValue position board
  in div [
-    cellStyle,
+    itemStyle,
     onClick Roll
- ] [ text s ]
+ ] [ text gem ]
 
 renderLine: Int -> Int -> Board -> Html Msg
 renderLine i width board =
  let list     = exclusiveRange 0 width
-     elements = List.map (\j -> renderItem i j board) list
+     elements = List.map (\j -> renderItem (i, j) board) list
  in div [ style [
     "margin" => "0 auto",
     "width" => px (width * 34)
  ] ] elements
 
-renderBoard: Model -> List (Html Msg)
+renderBoard: Model -> Html Msg
 renderBoard { width, height, board } =
- let list = exclusiveRange 0 height
- in List.map (\i -> renderLine i width board) list
-
-render: Model -> Html Msg
-render model =
-  let elements = renderBoard model
-  in div [ style [
+ let list     = exclusiveRange 0 height
+     elements = List.map (\i -> renderLine i width board) list
+ in div [ style [
     "-moz-user-select" => "none",
     "user-select"      => "none"
   ] ] elements
+
+render: Model -> Html Msg
+render model = renderBoard model

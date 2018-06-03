@@ -5,15 +5,10 @@ import Dict
 import Random exposing (Generator)
 
 import Helpers exposing (exclusiveRange)
-import Shared exposing (Position, Board, Model, Msg(..))
+import Shared exposing (Position, Board, Gems, Model, Msg(..))
 
-type alias Gems = List String
-
-defaultPalette: Gems
-defaultPalette = ["a", "b", "c", "d", "e"]
-
-getPalette: Gems -> Gems -> Gems
-getPalette palette matched =
+filterGems: Gems -> Gems -> Gems
+filterGems palette matched =
   List.filter (\i -> not <| List.member i matched) palette 
 
 insertValue: Gems -> Int -> Position -> Board -> Board
@@ -31,37 +26,37 @@ getMatched board p1 p2 =
  (Just v1, Just v2) -> if v1 == v2 then [v1] else []
  _ -> []
 
-getSource: Position -> Board -> Gems
-getSource (i, j) board =
+getSource: Gems -> Position -> Board -> Gems
+getSource gems (i, j) board =
  let partial = getMatched board
      m1      = partial (i, j - 1) (i, j - 2)
      m2      = partial (i - 1, j) (i - 2, j)
      matched = List.append m1 m2
- in getPalette defaultPalette matched
+ in filterGems gems matched
 
-generateItem: Position -> Board -> Generator Board
-generateItem position board =
-  let source = getSource position board
+generateItem: Gems -> Position -> Board -> Generator Board
+generateItem gems position board =
+  let source = getSource gems position board
       max    = List.length source - 1
       gen    = Random.int 0 max
   in Random.map (\i -> insertValue source i position board) gen
 
-genItem: Position -> Generator Board -> Generator Board
-genItem position gen =
- let next board = generateItem position board
+chainItem: Gems -> Position -> Generator Board -> Generator Board
+chainItem gems position gen =
+ let next board = generateItem gems position board
  in Random.andThen next gen
 
-generateLine: Int -> Int -> Generator Board -> Generator Board
-generateLine i width chained =
+generateLine: Gems -> Int -> Int -> Generator Board -> Generator Board
+generateLine gems i width chained =
   let list = exclusiveRange 0 width
-  in List.foldl (\j -> genItem (i, j)) chained list
+  in List.foldl (\j -> chainItem gems (i, j)) chained list
 
-generateBoard: Int -> Int -> Generator Board
-generateBoard width height =
+generateBoard: Model -> Generator Board
+generateBoard { width, height, gems } =
  let list    = exclusiveRange 0 height
      initial = Random.map(\x -> Dict.empty) Random.bool
- in List.foldl (\i -> generateLine i width) initial list
+ in List.foldl (\i -> generateLine gems i width) initial list
 
 generate: Model -> Cmd Msg
-generate { width, height } =
- Random.generate NewBoard <| generateBoard width height
+generate model =
+ Random.generate NewBoard (generateBoard model)
