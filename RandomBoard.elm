@@ -8,8 +8,8 @@ import Helpers exposing (exclusiveRange)
 import Shared exposing (Position, Board, Gems, Model, Msg(..))
 
 filterGems: Gems -> Gems -> Gems
-filterGems palette matched =
-  List.filter (\i -> not <| List.member i matched) palette 
+filterGems gems matched =
+  List.filter (\i -> not <| List.member i matched) gems 
 
 insertValue: Gems -> Int -> Position -> Board -> Board
 insertValue source index position board =
